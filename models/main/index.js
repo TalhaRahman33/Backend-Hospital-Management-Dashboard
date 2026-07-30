@@ -2,6 +2,7 @@ const Role = require("./Role");
 const User = require("./User");
 const Hospital = require("./Hospital");
 const UserHospital = require("./UserHospital");
+const LoginOTP = require("./LoginOTP");
 
 // Role → Users
 Role.hasMany(User, {
@@ -36,9 +37,21 @@ UserHospital.belongsTo(Hospital, {
   as: "hospital",
 });
 
+// User → Login OTPs
+User.hasMany(LoginOTP, {
+  foreignKey: "userId",
+  as: "loginOTPs",
+});
+
+LoginOTP.belongsTo(User, {
+  foreignKey: "userId",
+  as: "user",
+});
+
 module.exports = {
   Role,
   User,
   Hospital,
   UserHospital,
+  LoginOTP,
 };
