@@ -17,6 +17,7 @@ require("./models/main");
 // Routes
 const userRoutes = require("./routes/user.routes");
 const authRoutes = require("./routes/auth.routes");
+const hospitalRoutes = require("./routes/hospital.routes");
 
 
 const app = express();
@@ -63,7 +64,7 @@ app.use(
   userRoutes
 );
 
-
+app.use("/api/hospitals", hospitalRoutes);
 
 // Health check
 

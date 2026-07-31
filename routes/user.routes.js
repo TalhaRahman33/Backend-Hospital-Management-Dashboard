@@ -8,16 +8,46 @@ const {
   deleteUser,
 } = require("../controllers/user.controller");
 
+const authMiddleware = require("../middleware/auth.middleware");
+const roleMiddleware = require("../middleware/role.middleware");
+
 const router = express.Router();
 
-router.post("/", createUser);
+// Only SUPER_ADMIN can manage users
 
-router.get("/", getAllUsers);
+router.post(
+  "/",
+  authMiddleware,
+  roleMiddleware("SUPER_ADMIN"),
+  createUser
+);
 
-router.get("/:id", getUserById);
+router.get(
+  "/",
+  authMiddleware,
+  roleMiddleware("SUPER_ADMIN"),
+  getAllUsers
+);
 
-router.put("/:id", updateUser);
+router.get(
+  "/:id",
+  authMiddleware,
+  roleMiddleware("SUPER_ADMIN"),
+  getUserById
+);
 
-router.delete("/:id", deleteUser);
+router.put(
+  "/:id",
+  authMiddleware,
+  roleMiddleware("SUPER_ADMIN"),
+  updateUser
+);
+
+router.delete(
+  "/:id",
+  authMiddleware,
+  roleMiddleware("SUPER_ADMIN"),
+  deleteUser
+);
 
 module.exports = router;
