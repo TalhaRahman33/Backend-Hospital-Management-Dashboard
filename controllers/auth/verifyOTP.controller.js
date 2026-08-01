@@ -1,11 +1,10 @@
 const { User, LoginOTP } = require("../../models/main");
 
-const {
-  compareOTP,
-} = require("../../utils/otp");
+const { compareOTP } = require("../../utils/otp");
 
 const {
   generateAccessToken,
+  generateRefreshToken,
 } = require("../../utils/jwt");
 
 const verifyOTP = async (req, res) => {
@@ -30,7 +29,15 @@ const verifyOTP = async (req, res) => {
       });
     }
 
-    // 3. Find latest OTP
+    // 3. Check user status
+    if (user.status !== "ACTIVE") {
+      return res.status(403).json({
+        success: false,
+        message: "Your account is not active",
+      });
+    }
+
+    // 4. Find latest unused OTP
     const loginOTP = await LoginOTP.findOne({
       where: {
         userId: user.id,
@@ -46,7 +53,7 @@ const verifyOTP = async (req, res) => {
       });
     }
 
-    // 4. Check expiration
+    // 5. Check expiration
     if (new Date() > new Date(loginOTP.expiresAt)) {
       return res.status(400).json({
         success: false,
@@ -54,7 +61,7 @@ const verifyOTP = async (req, res) => {
       });
     }
 
-    // 5. Check maximum attempts
+    // 6. Check maximum attempts
     if (loginOTP.attempts >= 5) {
       return res.status(429).json({
         success: false,
@@ -62,13 +69,13 @@ const verifyOTP = async (req, res) => {
       });
     }
 
-    // 6. Compare OTP
+    // 7. Compare OTP
     const otpMatched = await compareOTP(
       otp,
       loginOTP.otpHash
     );
 
-    // 7. Wrong OTP
+    // 8. Wrong OTP
     if (!otpMatched) {
       await loginOTP.increment("attempts");
 
@@ -78,27 +85,46 @@ const verifyOTP = async (req, res) => {
       });
     }
 
-    // 8. Mark OTP as verified
+    // 9. Mark OTP as verified
     await loginOTP.update({
       verifiedAt: new Date(),
     });
 
-    // 9. Generate Access Token
+    // 10. Generate tokens
     const accessToken = generateAccessToken({
-      userId: user.id,
+      id: user.id,
       roleId: user.roleId,
     });
 
-    // 10. Update last login
+    const refreshToken = generateRefreshToken({
+      id: user.id,
+    });
+
+    // 11. Store tokens in HttpOnly cookies
+
+    res.cookie("accessToken", accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 15 * 60 * 1000, // 15 minutes
+    });
+
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    // 12. Update last login
     await user.update({
       lastLoginAt: new Date(),
     });
 
+    // 13. Response
     return res.status(200).json({
       success: true,
       message: "Login successful",
-
-      accessToken,
 
       user: {
         id: user.id,
@@ -108,6 +134,7 @@ const verifyOTP = async (req, res) => {
         roleId: user.roleId,
       },
     });
+
   } catch (error) {
     console.error("OTP verification error:", error);
 

@@ -3,28 +3,13 @@ const { User, Role } = require("../models/main");
 
 const authMiddleware = async (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader) {
-      return res.status(401).json({
-        success: false,
-        message: "Authorization header is required",
-      });
-    }
-
-    if (!authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid authorization format",
-      });
-    }
-
-    const token = authHeader.split(" ")[1];
+    // Get access token from HttpOnly cookie
+    const token = req.cookies.accessToken;
 
     if (!token) {
       return res.status(401).json({
         success: false,
-        message: "Access token is required",
+        message: "Authentication required",
       });
     }
 
@@ -34,7 +19,7 @@ const authMiddleware = async (req, res, next) => {
       process.env.JWT_ACCESS_SECRET
     );
 
-    // Find actual user from database
+    // Find actual user
     const user = await User.findByPk(decoded.userId, {
       include: [
         {
@@ -51,7 +36,7 @@ const authMiddleware = async (req, res, next) => {
       });
     }
 
-    // Check user status
+    // Check status
     if (user.status !== "ACTIVE") {
       return res.status(403).json({
         success: false,
@@ -67,6 +52,7 @@ const authMiddleware = async (req, res, next) => {
     };
 
     next();
+
   } catch (error) {
     console.error("Auth middleware error:", error.message);
 
