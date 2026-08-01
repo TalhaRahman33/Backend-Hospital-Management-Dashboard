@@ -7,11 +7,16 @@ const {
   hashOTP,
 } = require("../../utils/otp");
 
+const { sendLoginOTP } = require("../../utils/email");
+
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    // =====================================================
     // 1. Validate input
+    // =====================================================
+
     if (!email || !password) {
       return res.status(400).json({
         success: false,
@@ -19,7 +24,10 @@ const login = async (req, res) => {
       });
     }
 
+    // =====================================================
     // 2. Find user
+    // =====================================================
+
     const user = await User.findOne({
       where: {
         email,
@@ -33,7 +41,10 @@ const login = async (req, res) => {
       });
     }
 
-    // 3. Check user status
+    // =====================================================
+    // 3. Check account status
+    // =====================================================
+
     if (user.status !== "ACTIVE") {
       return res.status(403).json({
         success: false,
@@ -41,7 +52,10 @@ const login = async (req, res) => {
       });
     }
 
+    // =====================================================
     // 4. Check password
+    // =====================================================
+
     const passwordMatched = await comparePassword(
       password,
       user.passwordHash
@@ -54,7 +68,10 @@ const login = async (req, res) => {
       });
     }
 
-    // 5. Delete old unverified OTPs for this user
+    // =====================================================
+    // 5. Delete previous unused OTPs
+    // =====================================================
+
     await LoginOTP.destroy({
       where: {
         userId: user.id,
@@ -62,33 +79,73 @@ const login = async (req, res) => {
       },
     });
 
+    // =====================================================
     // 6. Generate new OTP
+    // =====================================================
+
     const otp = generateOTP();
 
-    // 7. Hash OTP before storing it
+    // =====================================================
+    // 7. Hash OTP
+    // =====================================================
+
     const otpHash = await hashOTP(otp);
 
+    // =====================================================
     // 8. OTP expires after 5 minutes
+    // =====================================================
+
     const expiresAt = new Date(
       Date.now() + 5 * 60 * 1000
     );
 
-    // 9. Save OTP in database
+    // =====================================================
+    // 9. Save hashed OTP in database
+    // =====================================================
+
     await LoginOTP.create({
       userId: user.id,
       otpHash,
       expiresAt,
     });
 
-    // Development only
-    console.log(`OTP for ${email}: ${otp}`);
+    // =====================================================
+    // 10. Send OTP to user's email
+    // =====================================================
+
+    try {
+      await sendLoginOTP(user.email, otp);
+    } catch (emailError) {
+      console.error(
+        "OTP email sending failed:",
+        emailError
+      );
+
+      // Delete OTP because email was not sent
+      await LoginOTP.destroy({
+        where: {
+          userId: user.id,
+          verifiedAt: null,
+        },
+      });
+
+      return res.status(500).json({
+        success: false,
+        message: "Unable to send OTP to your email",
+      });
+    }
+
+    // =====================================================
+    // 11. Response
+    // =====================================================
 
     return res.status(200).json({
       success: true,
-      message: "OTP sent successfully",
+      message: "OTP sent successfully to your email",
       requires2FA: true,
       userId: user.id,
     });
+
   } catch (error) {
     console.error("Login error:", error);
 
