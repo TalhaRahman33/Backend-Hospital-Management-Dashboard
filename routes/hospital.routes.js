@@ -8,21 +8,45 @@ const {
   deleteHospital,
 } = require("../controllers/hospital.controller");
 
+const authMiddleware = require("../middleware/auth.middleware");
+const roleMiddleware = require("../middleware/role.middleware");
+
 const router = express.Router();
 
-// Create
-router.post("/", createHospital);
+// Only SUPER_ADMIN can manage hospitals
+router.post(
+  "/",
+  authMiddleware,
+  roleMiddleware("SUPER_ADMIN"),
+  createHospital
+);
 
-// Read all
-router.get("/", getHospitals);
+router.get(
+  "/",
+  authMiddleware,
+  roleMiddleware("SUPER_ADMIN"),
+  getHospitals
+);
 
-// Read one
-router.get("/:id", getHospitalById);
+router.get(
+  "/:id",
+  authMiddleware,
+  roleMiddleware("SUPER_ADMIN"),
+  getHospitalById
+);
 
-// Update
-router.put("/:id", updateHospital);
+router.put(
+  "/:id",
+  authMiddleware,
+  roleMiddleware("SUPER_ADMIN"),
+  updateHospital
+);
 
-// Delete
-router.delete("/:id", deleteHospital);
+router.delete(
+  "/:id",
+  authMiddleware,
+  roleMiddleware("SUPER_ADMIN"),
+  deleteHospital
+);
 
 module.exports = router;

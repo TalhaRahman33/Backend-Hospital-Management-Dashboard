@@ -18,6 +18,7 @@ require("./models/main");
 const userRoutes = require("./routes/user.routes");
 const authRoutes = require("./routes/auth.routes");
 const hospitalRoutes = require("./routes/hospital.routes");
+const authMiddleware = require("./middleware/auth.middleware");
 
 
 const app = express();
@@ -58,6 +59,19 @@ app.use(
   authRoutes
 );
 
+app.use("/api", (req, res, next) => {
+  const publicRoutes = [
+    "/api/auth/login",
+    "/api/auth/verify-otp",
+    "/api/auth/resend-otp",
+  ];
+
+  if (publicRoutes.includes(req.path)) {
+    return next();
+  }
+
+  return authMiddleware(req, res, next);
+});
 
 app.use(
   "/api/users",

@@ -3,8 +3,13 @@ const { User, Role } = require("../models/main");
 
 const authMiddleware = async (req, res, next) => {
   try {
-    // Get access token from HttpOnly cookie
-    const token = req.cookies.accessToken;
+    // Support both cookie-based tokens and Authorization header tokens
+    const cookieToken = req.cookies?.accessToken;
+    const authHeader = req.headers?.authorization || "";
+    const headerToken = authHeader.startsWith("Bearer ")
+      ? authHeader.slice(7)
+      : "";
+    const token = cookieToken || headerToken;
 
     if (!token) {
       return res.status(401).json({
