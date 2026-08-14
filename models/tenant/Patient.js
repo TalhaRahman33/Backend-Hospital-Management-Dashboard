@@ -10,19 +10,33 @@ const definePatientModel = (sequelize) => {
         primaryKey: true,
       },
 
-      firstName: {
-        type: DataTypes.STRING(100),
+      visitNumber: {
+        type: DataTypes.STRING(8),
+        allowNull: false,
+        unique: true,
+        validate: {
+          is: /^[0-9]{8}$/,
+        },
+      },
+
+      name: {
+        type: DataTypes.STRING(200),
         allowNull: false,
       },
 
-      lastName: {
-        type: DataTypes.STRING(100),
+      cnic: {
+        type: DataTypes.STRING(20),
         allowNull: false,
       },
 
-      phone: {
-        type: DataTypes.STRING(30),
-        allowNull: true,
+      gender: {
+        type: DataTypes.STRING(20),
+        allowNull: false,
+      },
+
+      purposeOfVisit: {
+        type: DataTypes.TEXT,
+        allowNull: false,
       },
     },
     {

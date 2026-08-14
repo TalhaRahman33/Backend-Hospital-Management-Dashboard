@@ -1,6 +1,35 @@
 const { Sequelize } = require("sequelize");
 require("dotenv").config();
 
+const tenantDatabase = new Sequelize(
+  process.env.TENANT_DB_NAME || "",
+  process.env.MAIN_DB_USER,
+  process.env.MAIN_DB_PASSWORD,
+  {
+    host: process.env.MAIN_DB_HOST,
+    port: process.env.MAIN_DB_PORT,
+    dialect: "mysql",
+    logging: false,
+  }
+);
+
+const connectTenantDatabase = async () => {
+  try {
+    await tenantDatabase.authenticate();
+
+    console.log("Tenant database connected successfully");
+
+    return tenantDatabase;
+  } catch (error) {
+    console.error(
+      "Tenant database connection failed:",
+      error.message
+    );
+
+    throw error;
+  }
+};
+
 const createTenantDatabase = async (databaseName) => {
   // Connection without selecting a database
   const sequelize = new Sequelize(
@@ -42,4 +71,6 @@ const createTenantDatabase = async (databaseName) => {
 
 module.exports = {
   createTenantDatabase,
+  tenantDatabase,
+  connectTenantDatabase,
 };

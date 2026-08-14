@@ -18,6 +18,7 @@ require("./models/main");
 const userRoutes = require("./routes/user.routes");
 const authRoutes = require("./routes/auth.routes");
 const hospitalRoutes = require("./routes/hospital.routes");
+const patientRoutes = require("./routes/patient.routes");
 const authMiddleware = require("./middleware/auth.middleware");
 
 
@@ -79,6 +80,7 @@ app.use(
 );
 
 app.use("/api/hospitals", hospitalRoutes);
+app.use("/api/patients", patientRoutes);
 
 // Health check
 
