@@ -92,12 +92,12 @@ const verifyOTP = async (req, res) => {
 
     // 10. Generate tokens
     const accessToken = generateAccessToken({
-      id: user.id,
+      userId: user.id,
       roleId: user.roleId,
     });
 
     const refreshToken = generateRefreshToken({
-      id: user.id,
+      userId: user.id,
     });
 
     // 11. Store tokens in HttpOnly cookies

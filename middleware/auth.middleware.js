@@ -1,6 +1,28 @@
 const jwt = require("jsonwebtoken");
 const { User, Role } = require("../models/main");
 
+const clearAuthCookies = (res) => {
+  const cookieOptions = {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  };
+
+  res.clearCookie("accessToken", cookieOptions);
+  res.clearCookie("refreshToken", cookieOptions);
+};
+
+const sendAuthError = (res, statusCode, code, message, redirectTo = "/login") => {
+  clearAuthCookies(res);
+
+  return res.status(statusCode).json({
+    success: false,
+    code,
+    message,
+    redirectTo,
+  });
+};
+
 const authMiddleware = async (req, res, next) => {
   try {
     // Support both cookie-based tokens and Authorization header tokens
@@ -19,10 +41,13 @@ const authMiddleware = async (req, res, next) => {
     console.log("- Token length:", token?.length || 0);
 
     if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: "Authentication required",
-      });
+      return sendAuthError(
+        res,
+        401,
+        "AUTH_REQUIRED",
+        "Authentication required. Please login again.",
+        "/login"
+      );
     }
 
     // Verify JWT
@@ -42,10 +67,13 @@ const authMiddleware = async (req, res, next) => {
     });
 
     if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: "User no longer exists",
-      });
+      return sendAuthError(
+        res,
+        401,
+        "USER_NOT_FOUND",
+        "User no longer exists. Please login again.",
+        "/login"
+      );
     }
 
     // Check status
@@ -71,17 +99,23 @@ const authMiddleware = async (req, res, next) => {
     console.error("Full error:", error);
 
     if (error.name === "TokenExpiredError") {
-      return res.status(401).json({
-        success: false,
-        message: "Access token expired",
-      });
+      return sendAuthError(
+        res,
+        401,
+        "TOKEN_EXPIRED",
+        "Session expired. Please login again.",
+        "/login"
+      );
     }
 
     if (error.name === "JsonWebTokenError") {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid access token: " + error.message,
-      });
+      return sendAuthError(
+        res,
+        401,
+        "INVALID_TOKEN",
+        "Invalid access token. Please login again.",
+        "/login"
+      );
     }
 
     return res.status(500).json({

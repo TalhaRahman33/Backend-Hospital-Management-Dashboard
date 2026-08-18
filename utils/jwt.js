@@ -1,11 +1,13 @@
 const jwt = require("jsonwebtoken");
 
+const getUserId = (user = {}) => user.userId ?? user.id;
+const getRoleId = (user = {}) => user.roleId ?? user.role_id ?? null;
 
-const generateAccessToken = (user) => {
+const generateAccessToken = (user = {}) => {
   return jwt.sign(
     {
-      userId: user.id,
-      roleId: user.roleId,
+      userId: getUserId(user),
+      roleId: getRoleId(user),
     },
     process.env.JWT_ACCESS_SECRET,
     {
@@ -14,11 +16,10 @@ const generateAccessToken = (user) => {
   );
 };
 
-
-const generateRefreshToken = (user) => {
+const generateRefreshToken = (user = {}) => {
   return jwt.sign(
     {
-      userId: user.id,
+      userId: getUserId(user),
     },
     process.env.JWT_REFRESH_SECRET,
     {
