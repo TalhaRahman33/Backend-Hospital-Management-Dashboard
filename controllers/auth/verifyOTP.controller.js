@@ -121,11 +121,12 @@ const verifyOTP = async (req, res) => {
       lastLoginAt: new Date(),
     });
 
-    // 13. Response
+    // 13. Response with tokens for localStorage
     return res.status(200).json({
       success: true,
       message: "Login successful",
-
+      accessToken,
+      refreshToken,
       user: {
         id: user.id,
         firstName: user.firstName,

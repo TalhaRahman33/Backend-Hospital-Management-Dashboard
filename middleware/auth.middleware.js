@@ -11,6 +11,13 @@ const authMiddleware = async (req, res, next) => {
       : "";
     const token = cookieToken || headerToken;
 
+    console.log("DEBUG Auth Middleware:");
+    console.log("- Cookie token exists:", !!cookieToken);
+    console.log("- Auth header:", authHeader.substring(0, 50) + (authHeader.length > 50 ? "..." : ""));
+    console.log("- Header token exists:", !!headerToken);
+    console.log("- Final token exists:", !!token);
+    console.log("- Token length:", token?.length || 0);
+
     if (!token) {
       return res.status(401).json({
         success: false,
@@ -60,6 +67,8 @@ const authMiddleware = async (req, res, next) => {
 
   } catch (error) {
     console.error("Auth middleware error:", error.message);
+    console.error("Error name:", error.name);
+    console.error("Full error:", error);
 
     if (error.name === "TokenExpiredError") {
       return res.status(401).json({
@@ -71,7 +80,7 @@ const authMiddleware = async (req, res, next) => {
     if (error.name === "JsonWebTokenError") {
       return res.status(401).json({
         success: false,
-        message: "Invalid access token",
+        message: "Invalid access token: " + error.message,
       });
     }
 

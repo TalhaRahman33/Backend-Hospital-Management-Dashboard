@@ -1,9 +1,64 @@
-const { tenantDatabase } = require("../config/tenantDatabase");
+const { Sequelize } = require("sequelize");
 const definePatientModel = require("../models/tenant/Patient");
+const { Hospital, UserHospital } = require("../models/main");
 
-const Patient = definePatientModel(tenantDatabase);
+require("dotenv").config();
 
-const generateVisitNumber = async () => {
+// Function to get hospital database connection
+const getHospitalDatabase = async (hospitalId) => {
+  try {
+    const hospital = await Hospital.findByPk(hospitalId);
+
+    if (!hospital) {
+      throw new Error("Hospital not found");
+    }
+
+    const tenantDatabase = new Sequelize(
+      hospital.databaseName,
+      process.env.MAIN_DB_USER,
+      process.env.MAIN_DB_PASSWORD,
+      {
+        host: process.env.MAIN_DB_HOST,
+        port: process.env.MAIN_DB_PORT,
+        dialect: "mysql",
+        logging: false,
+      }
+    );
+
+    await tenantDatabase.authenticate();
+
+    return tenantDatabase;
+  } catch (error) {
+    console.error("Failed to connect to hospital database:", error);
+    throw error;
+  }
+};
+
+// Function to get patient model for a hospital
+const getPatientModel = async (hospitalId) => {
+  const tenantDatabase = await getHospitalDatabase(hospitalId);
+  const Patient = definePatientModel(tenantDatabase);
+  return { Patient, tenantDatabase };
+};
+
+// Function to get user's hospital ID
+const getUserHospitalId = async (userId) => {
+  const userHospital = await UserHospital.findOne({
+    where: {
+      userId,
+      isActive: true,
+    },
+  });
+
+  if (!userHospital) {
+    throw new Error("User not assigned to any hospital");
+  }
+
+  return userHospital.hospitalId;
+};
+
+const generateVisitNumber = async (hospitalId) => {
+  const { Patient, tenantDatabase } = await getPatientModel(hospitalId);
   let visitNumber;
   let exists = true;
 
@@ -17,6 +72,7 @@ const generateVisitNumber = async () => {
     exists = Boolean(patient);
   }
 
+  await tenantDatabase.close();
   return visitNumber;
 };
 
@@ -26,6 +82,8 @@ const generateVisitNumber = async () => {
 // =====================================================
 
 const createPatient = async (req, res) => {
+  let tenantDatabase = null;
+
   try {
     const {
       name,
@@ -34,16 +92,25 @@ const createPatient = async (req, res) => {
       purposeOfVisit,
     } = req.body;
 
+    // Validate input
     if (!name || !cnic || !gender || !purposeOfVisit) {
       return res.status(400).json({
         success: false,
-        message:
-          "name, cnic, gender and purposeOfVisit are required",
+        message: "name, cnic, gender and purposeOfVisit are required",
       });
     }
 
-    const visitNumber = await generateVisitNumber();
+    // Get user's hospital
+    const hospitalId = await getUserHospitalId(req.user.userId);
 
+    // Get database connection
+    const { Patient, tenantDatabase: db } = await getPatientModel(hospitalId);
+    tenantDatabase = db;
+
+    // Generate visit number
+    const visitNumber = await generateVisitNumber(hospitalId);
+
+    // Create patient
     const patient = await Patient.create({
       visitNumber,
       name,
@@ -52,17 +119,23 @@ const createPatient = async (req, res) => {
       purposeOfVisit,
     });
 
+    await tenantDatabase.close();
+
     return res.status(201).json({
       success: true,
       message: "Patient created successfully",
       patient,
     });
   } catch (error) {
+    if (tenantDatabase) {
+      await tenantDatabase.close().catch(() => {});
+    }
+
     console.error("Create patient error:", error);
 
     return res.status(500).json({
       success: false,
-      message: "Failed to create patient",
+      message: error.message || "Failed to create patient",
     });
   }
 };
@@ -73,10 +146,21 @@ const createPatient = async (req, res) => {
 // =====================================================
 
 const getAllPatients = async (req, res) => {
+  let tenantDatabase = null;
+
   try {
+    // Get user's hospital
+    const hospitalId = await getUserHospitalId(req.user.userId);
+
+    // Get database connection
+    const { Patient, tenantDatabase: db } = await getPatientModel(hospitalId);
+    tenantDatabase = db;
+
     const patients = await Patient.findAll({
       order: [["createdAt", "DESC"]],
     });
+
+    await tenantDatabase.close();
 
     return res.status(200).json({
       success: true,
@@ -84,11 +168,15 @@ const getAllPatients = async (req, res) => {
       patients,
     });
   } catch (error) {
+    if (tenantDatabase) {
+      await tenantDatabase.close().catch(() => {});
+    }
+
     console.error("Get patients error:", error);
 
     return res.status(500).json({
       success: false,
-      message: "Failed to get patients",
+      message: error.message || "Failed to get patients",
     });
   }
 };
@@ -99,10 +187,21 @@ const getAllPatients = async (req, res) => {
 // =====================================================
 
 const getPatientById = async (req, res) => {
+  let tenantDatabase = null;
+
   try {
     const { id } = req.params;
 
+    // Get user's hospital
+    const hospitalId = await getUserHospitalId(req.user.userId);
+
+    // Get database connection
+    const { Patient, tenantDatabase: db } = await getPatientModel(hospitalId);
+    tenantDatabase = db;
+
     const patient = await Patient.findByPk(id);
+
+    await tenantDatabase.close();
 
     if (!patient) {
       return res.status(404).json({
@@ -116,11 +215,15 @@ const getPatientById = async (req, res) => {
       patient,
     });
   } catch (error) {
+    if (tenantDatabase) {
+      await tenantDatabase.close().catch(() => {});
+    }
+
     console.error("Get patient by id error:", error);
 
     return res.status(500).json({
       success: false,
-      message: "Failed to get patient",
+      message: error.message || "Failed to get patient",
     });
   }
 };
@@ -131,12 +234,23 @@ const getPatientById = async (req, res) => {
 // =====================================================
 
 const getPatientByVisitNumber = async (req, res) => {
+  let tenantDatabase = null;
+
   try {
     const { visitNumber } = req.params;
+
+    // Get user's hospital
+    const hospitalId = await getUserHospitalId(req.user.userId);
+
+    // Get database connection
+    const { Patient, tenantDatabase: db } = await getPatientModel(hospitalId);
+    tenantDatabase = db;
 
     const patient = await Patient.findOne({
       where: { visitNumber },
     });
+
+    await tenantDatabase.close();
 
     if (!patient) {
       return res.status(404).json({
@@ -150,11 +264,15 @@ const getPatientByVisitNumber = async (req, res) => {
       patient,
     });
   } catch (error) {
+    if (tenantDatabase) {
+      await tenantDatabase.close().catch(() => {});
+    }
+
     console.error("Get patient by visit number error:", error);
 
     return res.status(500).json({
       success: false,
-      message: "Failed to get patient",
+      message: error.message || "Failed to get patient",
     });
   }
 };
@@ -165,6 +283,8 @@ const getPatientByVisitNumber = async (req, res) => {
 // =====================================================
 
 const updatePatient = async (req, res) => {
+  let tenantDatabase = null;
+
   try {
     const { id } = req.params;
     const {
@@ -174,9 +294,17 @@ const updatePatient = async (req, res) => {
       purposeOfVisit,
     } = req.body;
 
+    // Get user's hospital
+    const hospitalId = await getUserHospitalId(req.user.userId);
+
+    // Get database connection
+    const { Patient, tenantDatabase: db } = await getPatientModel(hospitalId);
+    tenantDatabase = db;
+
     const patient = await Patient.findByPk(id);
 
     if (!patient) {
+      await tenantDatabase.close();
       return res.status(404).json({
         success: false,
         message: "Patient not found",
@@ -190,17 +318,23 @@ const updatePatient = async (req, res) => {
       purposeOfVisit: purposeOfVisit ?? patient.purposeOfVisit,
     });
 
+    await tenantDatabase.close();
+
     return res.status(200).json({
       success: true,
       message: "Patient updated successfully",
       patient,
     });
   } catch (error) {
+    if (tenantDatabase) {
+      await tenantDatabase.close().catch(() => {});
+    }
+
     console.error("Update patient error:", error);
 
     return res.status(500).json({
       success: false,
-      message: "Failed to update patient",
+      message: error.message || "Failed to update patient",
     });
   }
 };
@@ -211,12 +345,22 @@ const updatePatient = async (req, res) => {
 // =====================================================
 
 const deletePatient = async (req, res) => {
+  let tenantDatabase = null;
+
   try {
     const { id } = req.params;
+
+    // Get user's hospital
+    const hospitalId = await getUserHospitalId(req.user.userId);
+
+    // Get database connection
+    const { Patient, tenantDatabase: db } = await getPatientModel(hospitalId);
+    tenantDatabase = db;
 
     const patient = await Patient.findByPk(id);
 
     if (!patient) {
+      await tenantDatabase.close();
       return res.status(404).json({
         success: false,
         message: "Patient not found",
@@ -225,16 +369,22 @@ const deletePatient = async (req, res) => {
 
     await patient.destroy();
 
+    await tenantDatabase.close();
+
     return res.status(200).json({
       success: true,
       message: "Patient deleted successfully",
     });
   } catch (error) {
+    if (tenantDatabase) {
+      await tenantDatabase.close().catch(() => {});
+    }
+
     console.error("Delete patient error:", error);
 
     return res.status(500).json({
       success: false,
-      message: "Failed to delete patient",
+      message: error.message || "Failed to delete patient",
     });
   }
 };
