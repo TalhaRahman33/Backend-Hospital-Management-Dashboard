@@ -19,6 +19,7 @@ const sendAuthError = (res, statusCode, code, message, redirectTo = "/login") =>
     success: false,
     code,
     message,
+    friendlyMessage: "Your session has expired because you were inactive for a while. Please sign in again.",
     redirectTo,
   });
 };
