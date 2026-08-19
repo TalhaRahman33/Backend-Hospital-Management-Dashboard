@@ -1,4 +1,10 @@
-const { User, LoginOTP } = require("../../models/main");
+const {
+  User,
+  LoginOTP,
+  Role,
+  UserHospital,
+  Hospital,
+} = require("../../models/main");
 
 const { compareOTP } = require("../../utils/otp");
 
@@ -20,7 +26,31 @@ const verifyOTP = async (req, res) => {
     }
 
     // 2. Find user
-    const user = await User.findByPk(userId);
+    const user = await User.findByPk(userId, {
+      include: [
+        {
+          model: Role,
+          as: "role",
+          attributes: ["id", "name"],
+        },
+        {
+          model: UserHospital,
+          as: "hospitalAssignments",
+          where: {
+            isActive: true,
+          },
+          required: false,
+          attributes: ["id", "hospitalId", "isActive", "assignedAt"],
+          include: [
+            {
+              model: Hospital,
+              as: "hospital",
+              attributes: ["id", "name", "code"],
+            },
+          ],
+        },
+      ],
+    });
 
     if (!user) {
       return res.status(404).json({
@@ -133,6 +163,8 @@ const verifyOTP = async (req, res) => {
         lastName: user.lastName,
         email: user.email,
         roleId: user.roleId,
+        role: user.role,
+        hospitalAssignments: user.hospitalAssignments,
       },
     });
 
