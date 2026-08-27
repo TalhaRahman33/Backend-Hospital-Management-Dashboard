@@ -1,5 +1,8 @@
 const jwt = require("jsonwebtoken");
 
+const ACCESS_TOKEN_EXPIRES_IN = process.env.JWT_ACCESS_EXPIRES_IN || "10m";
+const REFRESH_TOKEN_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || "7d";
+
 const getUserId = (user = {}) => user.userId ?? user.id;
 const getRoleId = (user = {}) => user.roleId ?? user.role_id ?? null;
 
@@ -11,7 +14,7 @@ const generateAccessToken = (user = {}) => {
     },
     process.env.JWT_ACCESS_SECRET,
     {
-      expiresIn: "15m",
+      expiresIn: ACCESS_TOKEN_EXPIRES_IN,
     }
   );
 };
@@ -23,7 +26,7 @@ const generateRefreshToken = (user = {}) => {
     },
     process.env.JWT_REFRESH_SECRET,
     {
-      expiresIn: "7d",
+      expiresIn: REFRESH_TOKEN_EXPIRES_IN,
     }
   );
 };

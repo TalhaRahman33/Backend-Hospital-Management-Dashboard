@@ -13,6 +13,9 @@ const {
   generateRefreshToken,
 } = require("../../utils/jwt");
 
+const ACCESS_TOKEN_MAX_AGE = 10 * 60 * 1000;
+const REFRESH_TOKEN_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
+
 const verifyOTP = async (req, res) => {
   try {
     const { userId, otp } = req.body;
@@ -136,14 +139,14 @@ const verifyOTP = async (req, res) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 15 * 60 * 1000, // 15 minutes
+      maxAge: ACCESS_TOKEN_MAX_AGE,
     });
 
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      maxAge: REFRESH_TOKEN_MAX_AGE,
     });
 
     // 12. Update last login

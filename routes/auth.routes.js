@@ -18,12 +18,30 @@ const {
 
 const authMiddleware = require("../middleware/auth.middleware");
 
+const clearAuthCookies = (res) => {
+  const cookieOptions = {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  };
+
+  res.clearCookie("accessToken", cookieOptions);
+  res.clearCookie("refreshToken", cookieOptions);
+};
 
 const router = express.Router();
 
 router.post("/login", login);
 router.post("/verify-otp", verifyOTP);
 router.post("/resend-otp", resendOTP);
+router.post("/logout", (req, res) => {
+  clearAuthCookies(res);
+
+  return res.status(200).json({
+    success: true,
+    message: "Logged out successfully",
+  });
+});
 router.get("/me", authMiddleware, getCurrentUser);
 
 module.exports = router;
