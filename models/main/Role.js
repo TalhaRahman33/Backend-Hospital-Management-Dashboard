@@ -16,6 +16,7 @@ const Role = mainDatabase.define(
         "PMO",
         "DMO",
         "HFO",
+        "HOSPITAL_HR",
         "DOCTOR"
       ),
       allowNull: false,

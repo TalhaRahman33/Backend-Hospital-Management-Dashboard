@@ -65,7 +65,8 @@ const createUser = async (req, res) => {
       "PMO",
       "DMO",
       "HFO",
-      "DOCTORS",
+      "HOSPITAL_HR",
+      "DOCTOR",
     ];
 
     if (!allowedRoles.includes(roleName)) {
@@ -120,7 +121,7 @@ const createUser = async (req, res) => {
 
     // HFO and Doctor = only ONE hospital
     if (
-      (roleName === "HFO" || roleName === "DOCTORS") &&
+      (roleName === "HFO" || roleName === "DOCTOR" || roleName === "HOSPITAL_HR") &&
       ids.length !== 1
     ) {
       return res.status(400).json({
@@ -478,7 +479,7 @@ const updateUser = async (req, res) => {
 
       // HFO / DOCTORS = one hospital
       if (
-        (roleName === "HFO" || roleName === "DOCTORS") &&
+        (roleName === "HFO" || roleName === "DOCTOR" || roleName === "HOSPITAL_HR") &&
         ids.length !== 1
       ) {
         return res.status(400).json({

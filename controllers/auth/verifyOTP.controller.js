@@ -155,6 +155,8 @@ const verifyOTP = async (req, res) => {
     });
 
     // 13. Response with tokens for localStorage
+    const defaultHospital = user.hospitalAssignments?.[0]?.hospital || null;
+
     return res.status(200).json({
       success: true,
       message: "Login successful",
@@ -167,6 +169,8 @@ const verifyOTP = async (req, res) => {
         email: user.email,
         roleId: user.roleId,
         role: user.role,
+        hospitalId: defaultHospital?.id || null,
+        hospitalName: defaultHospital?.name || null,
         hospitalAssignments: user.hospitalAssignments,
       },
     });

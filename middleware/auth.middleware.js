@@ -1,5 +1,5 @@
 const jwt = require("jsonwebtoken");
-const { User, Role } = require("../models/main");
+const { User, Role, UserHospital, Hospital } = require("../models/main");
 
 const clearAuthCookies = (res) => {
   const cookieOptions = {
@@ -34,13 +34,6 @@ const authMiddleware = async (req, res, next) => {
       : "";
     const token = cookieToken || headerToken;
 
-    console.log("DEBUG Auth Middleware:");
-    console.log("- Cookie token exists:", !!cookieToken);
-    console.log("- Auth header:", authHeader.substring(0, 50) + (authHeader.length > 50 ? "..." : ""));
-    console.log("- Header token exists:", !!headerToken);
-    console.log("- Final token exists:", !!token);
-    console.log("- Token length:", token?.length || 0);
-
     if (!token) {
       return sendAuthError(
         res,
@@ -64,6 +57,21 @@ const authMiddleware = async (req, res, next) => {
           model: Role,
           as: "role",
         },
+        {
+          model: UserHospital,
+          as: "hospitalAssignments",
+          where: {
+            isActive: true,
+          },
+          required: false,
+          include: [
+            {
+              model: Hospital,
+              as: "hospital",
+              attributes: ["id", "name", "code"],
+            },
+          ],
+        },
       ],
     });
 
@@ -85,11 +93,17 @@ const authMiddleware = async (req, res, next) => {
       });
     }
 
+    const activeHospitalAssignments = user.hospitalAssignments || [];
+    const defaultHospital = activeHospitalAssignments[0]?.hospital || null;
+
     // Store authenticated user
     req.user = {
       userId: user.id,
       roleId: user.roleId,
       role: user.role?.name,
+      hospitalAssignments: activeHospitalAssignments,
+      hospitalId: defaultHospital?.id || null,
+      hospitalName: defaultHospital?.name || null,
     };
 
     next();

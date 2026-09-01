@@ -1,5 +1,6 @@
 const { Sequelize } = require("sequelize");
 const definePatientModel = require("../../models/tenant/Patient");
+const defineHospitalEmployeeModel = require("../../models/tenant/HospitalEmployee");
 
 require("dotenv").config();
 
@@ -62,12 +63,13 @@ const createHospitalDatabase = async (databaseName) => {
     // --------------------------------
 
     definePatientModel(tenantDatabase);
+    defineHospitalEmployeeModel(tenantDatabase);
 
     // --------------------------------
     // 5. Create tenant tables
     // --------------------------------
 
-    await tenantDatabase.sync();
+    await tenantDatabase.sync({ alter: true });
 
     console.log(
       `Tenant tables created for: ${databaseName}`

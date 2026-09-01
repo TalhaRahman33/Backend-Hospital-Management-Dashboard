@@ -43,9 +43,15 @@ const getCurrentUser = async (req, res) => {
       });
     }
 
+    const defaultHospital = user.hospitalAssignments?.[0]?.hospital || null;
+
     return res.status(200).json({
       success: true,
-      user,
+      user: {
+        ...user.toJSON(),
+        hospitalId: defaultHospital?.id || null,
+        hospitalName: defaultHospital?.name || null,
+      },
     });
   } catch (error) {
     console.error("Get current user error:", error);
