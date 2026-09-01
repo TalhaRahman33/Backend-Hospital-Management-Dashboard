@@ -1,6 +1,6 @@
 const jwt = require("jsonwebtoken");
 
-const ACCESS_TOKEN_EXPIRES_IN = process.env.JWT_ACCESS_EXPIRES_IN || "10m";
+const ACCESS_TOKEN_EXPIRES_IN = process.env.JWT_ACCESS_EXPIRES_IN || "30m";
 const REFRESH_TOKEN_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || "7d";
 
 const getUserId = (user = {}) => user.userId ?? user.id;

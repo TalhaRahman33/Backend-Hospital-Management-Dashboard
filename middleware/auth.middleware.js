@@ -1,5 +1,10 @@
 const jwt = require("jsonwebtoken");
 const { User, Role, UserHospital, Hospital } = require("../models/main");
+const {
+  generateAccessToken,
+  generateRefreshToken,
+  verifyRefreshToken,
+} = require("../utils/jwt");
 
 const clearAuthCookies = (res) => {
   const cookieOptions = {
@@ -24,6 +29,102 @@ const sendAuthError = (res, statusCode, code, message, redirectTo = "/login") =>
   });
 };
 
+const setAuthCookies = (res, accessToken, refreshToken) => {
+  const cookieOptions = {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  };
+
+  res.cookie("accessToken", accessToken, {
+    ...cookieOptions,
+    maxAge: 30 * 60 * 1000,
+  });
+
+  res.cookie("refreshToken", refreshToken, {
+    ...cookieOptions,
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
+};
+
+const buildAuthenticatedUser = (user) => {
+  const activeHospitalAssignments = user.hospitalAssignments || [];
+  const defaultHospital = activeHospitalAssignments[0]?.hospital || null;
+
+  return {
+    userId: user.id,
+    roleId: user.roleId,
+    role: user.role?.name,
+    hospitalAssignments: activeHospitalAssignments,
+    hospitalId: defaultHospital?.id || null,
+    hospitalName: defaultHospital?.name || null,
+  };
+};
+
+const getUserByIdWithContext = async (userId) => {
+  return User.findByPk(userId, {
+    include: [
+      {
+        model: Role,
+        as: "role",
+      },
+      {
+        model: UserHospital,
+        as: "hospitalAssignments",
+        where: {
+          isActive: true,
+        },
+        required: false,
+        include: [
+          {
+            model: Hospital,
+            as: "hospital",
+            attributes: ["id", "name", "code"],
+          },
+        ],
+      },
+    ],
+  });
+};
+
+const tryRefreshSession = async (req, res) => {
+  const cookieRefresh = req.cookies?.refreshToken;
+  const authHeader = req.headers?.authorization || "";
+  const headerRefresh = authHeader.startsWith("Bearer ")
+    ? authHeader.slice(7)
+    : "";
+  const refreshToken = cookieRefresh || headerRefresh;
+
+  if (!refreshToken) {
+    return false;
+  }
+
+  try {
+    const decoded = verifyRefreshToken(refreshToken);
+    const user = await getUserByIdWithContext(decoded.userId);
+
+    if (!user || user.status !== "ACTIVE") {
+      return false;
+    }
+
+    const nextAccessToken = generateAccessToken({
+      userId: user.id,
+      roleId: user.roleId,
+    });
+
+    const nextRefreshToken = generateRefreshToken({
+      userId: user.id,
+    });
+
+    setAuthCookies(res, nextAccessToken, nextRefreshToken);
+
+    req.user = buildAuthenticatedUser(user);
+    return true;
+  } catch (error) {
+    return false;
+  }
+};
+
 const authMiddleware = async (req, res, next) => {
   try {
     // Support both cookie-based tokens and Authorization header tokens
@@ -35,6 +136,12 @@ const authMiddleware = async (req, res, next) => {
     const token = cookieToken || headerToken;
 
     if (!token) {
+      const refreshed = await tryRefreshSession(req, res);
+
+      if (refreshed) {
+        return next();
+      }
+
       return sendAuthError(
         res,
         401,
@@ -50,30 +157,7 @@ const authMiddleware = async (req, res, next) => {
       process.env.JWT_ACCESS_SECRET
     );
 
-    // Find actual user
-    const user = await User.findByPk(decoded.userId, {
-      include: [
-        {
-          model: Role,
-          as: "role",
-        },
-        {
-          model: UserHospital,
-          as: "hospitalAssignments",
-          where: {
-            isActive: true,
-          },
-          required: false,
-          include: [
-            {
-              model: Hospital,
-              as: "hospital",
-              attributes: ["id", "name", "code"],
-            },
-          ],
-        },
-      ],
-    });
+    const user = await getUserByIdWithContext(decoded.userId);
 
     if (!user) {
       return sendAuthError(
@@ -93,19 +177,7 @@ const authMiddleware = async (req, res, next) => {
       });
     }
 
-    const activeHospitalAssignments = user.hospitalAssignments || [];
-    const defaultHospital = activeHospitalAssignments[0]?.hospital || null;
-
-    // Store authenticated user
-    req.user = {
-      userId: user.id,
-      roleId: user.roleId,
-      role: user.role?.name,
-      hospitalAssignments: activeHospitalAssignments,
-      hospitalId: defaultHospital?.id || null,
-      hospitalName: defaultHospital?.name || null,
-    };
-
+    req.user = buildAuthenticatedUser(user);
     next();
 
   } catch (error) {
@@ -114,6 +186,12 @@ const authMiddleware = async (req, res, next) => {
     console.error("Full error:", error);
 
     if (error.name === "TokenExpiredError") {
+      const refreshed = await tryRefreshSession(req, res);
+
+      if (refreshed) {
+        return next();
+      }
+
       return sendAuthError(
         res,
         401,
@@ -124,6 +202,12 @@ const authMiddleware = async (req, res, next) => {
     }
 
     if (error.name === "JsonWebTokenError") {
+      const refreshed = await tryRefreshSession(req, res);
+
+      if (refreshed) {
+        return next();
+      }
+
       return sendAuthError(
         res,
         401,

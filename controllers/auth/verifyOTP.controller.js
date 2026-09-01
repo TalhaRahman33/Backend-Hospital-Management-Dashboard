@@ -13,7 +13,7 @@ const {
   generateRefreshToken,
 } = require("../../utils/jwt");
 
-const ACCESS_TOKEN_MAX_AGE = 10 * 60 * 1000;
+const ACCESS_TOKEN_MAX_AGE = 30 * 60 * 1000;
 const REFRESH_TOKEN_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
 
 const verifyOTP = async (req, res) => {

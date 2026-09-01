@@ -9,6 +9,10 @@ const {
 } = require("../controllers/auth/verifyOTP.controller");
 
 const {
+  refreshSession,
+} = require("../controllers/auth/refresh.controller");
+
+const {
   resendOTP,
 } = require("../controllers/auth/resendOTP.controller");
 
@@ -33,6 +37,7 @@ const router = express.Router();
 
 router.post("/login", login);
 router.post("/verify-otp", verifyOTP);
+router.post("/refresh", refreshSession);
 router.post("/resend-otp", resendOTP);
 router.post("/logout", (req, res) => {
   clearAuthCookies(res);
