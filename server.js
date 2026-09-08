@@ -20,6 +20,7 @@ const authRoutes = require("./routes/auth.routes");
 const hospitalRoutes = require("./routes/hospital.routes");
 const patientRoutes = require("./routes/patient.routes");
 const hospitalEmployeeRoutes = require("./routes/hospitalEmployee.routes");
+const checkupRoutes = require("./routes/checkup.routes");
 const authMiddleware = require("./middleware/auth.middleware");
 
 
@@ -83,6 +84,7 @@ app.use(
 app.use("/api/hospitals", hospitalRoutes);
 app.use("/api/patients", patientRoutes);
 app.use("/api/hospital-employees", hospitalEmployeeRoutes);
+app.use("/api/checkups", checkupRoutes);
 
 // Health check
 
