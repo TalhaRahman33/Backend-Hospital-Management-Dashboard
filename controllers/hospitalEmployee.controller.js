@@ -50,7 +50,6 @@ const getUserHospitalContext = async (userId) => {
 const getEmployeeModel = async (hospitalId) => {
   const { tenantDatabase } = await getHospitalDatabase(hospitalId);
   defineHospitalEmployeeModel(tenantDatabase);
-  await tenantDatabase.sync({ alter: true });
   const HospitalEmployee = tenantDatabase.model("HospitalEmployee");
   return { HospitalEmployee, tenantDatabase };
 };

@@ -36,7 +36,6 @@ const getCheckupContext = async (userId) => {
   await tenantDatabase.authenticate();
   const Patient = definePatientModel(tenantDatabase);
   const Checkup = defineCheckupModel(tenantDatabase);
-  await tenantDatabase.sync({ alter: true });
 
   return { Patient, Checkup, tenantDatabase };
 };

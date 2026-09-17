@@ -71,7 +71,7 @@ const createHospitalDatabase = async (databaseName) => {
     // 5. Create tenant tables
     // --------------------------------
 
-    await tenantDatabase.sync({ alter: true });
+    await tenantDatabase.sync();
 
     console.log(
       `Tenant tables created for: ${databaseName}`
