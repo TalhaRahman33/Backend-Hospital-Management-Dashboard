@@ -67,6 +67,8 @@ app.use("/api", (req, res, next) => {
     "/api/auth/login",
     "/api/auth/verify-otp",
     "/api/auth/resend-otp",
+    "/api/auth/forgot-password",
+    "/api/auth/reset-password",
   ];
 
   if (publicRoutes.includes(req.path)) {

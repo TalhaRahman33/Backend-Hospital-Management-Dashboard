@@ -43,6 +43,41 @@ const sendLoginOTP = async (email, otp) => {
   await transporter.sendMail(mailOptions);
 };
 
+const sendPasswordResetOTP = async (email, otp) => {
+  const mailOptions = {
+    from: `"Hospital Management System" <${process.env.SMTP_USER}>`,
+
+    to: email,
+
+    subject: "Your Password Reset Code",
+
+    text: `Your password reset code is ${otp}. This code will expire in 5 minutes.`,
+
+    html: `
+      <div style="font-family: Arial, sans-serif;">
+        <h2>Hospital Management System</h2>
+
+        <p>Your password reset code is:</p>
+
+        <h1 style="letter-spacing: 8px;">
+          ${otp}
+        </h1>
+
+        <p>
+          This code will expire in <strong>5 minutes</strong>.
+        </p>
+
+        <p>
+          If you did not request a password reset, please contact your administrator.
+        </p>
+      </div>
+    `,
+  };
+
+  await transporter.sendMail(mailOptions);
+};
+
 module.exports = {
   sendLoginOTP,
+  sendPasswordResetOTP,
 };

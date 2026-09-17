@@ -17,6 +17,11 @@ const {
 } = require("../controllers/auth/resendOTP.controller");
 
 const {
+  forgotPassword,
+  resetPassword,
+} = require("../controllers/auth/forgotPassword.controller");
+
+const {
   getCurrentUser,
 } = require("../controllers/auth/me.controller");
 
@@ -39,6 +44,8 @@ router.post("/login", login);
 router.post("/verify-otp", verifyOTP);
 router.post("/refresh", refreshSession);
 router.post("/resend-otp", resendOTP);
+router.post("/forgot-password", forgotPassword);
+router.post("/reset-password", resetPassword);
 router.post("/logout", (req, res) => {
   clearAuthCookies(res);
 
