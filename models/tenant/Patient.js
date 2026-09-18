@@ -38,6 +38,17 @@ const definePatientModel = (sequelize) => {
         type: DataTypes.TEXT,
         allowNull: false,
       },
+
+      status: {
+        type: DataTypes.ENUM(
+          "REGISTERED",
+          "CHECKUP",
+          "INPATIENT",
+          "DISCHARGED"
+        ),
+        allowNull: false,
+        defaultValue: "REGISTERED",
+      },
     },
     {
       tableName: "patients",

@@ -1,5 +1,6 @@
 const { Sequelize } = require("sequelize");
 const definePatientModel = require("../models/tenant/Patient");
+const defineCheckupModel = require("../models/tenant/Checkup");
 const { Hospital, UserHospital } = require("../models/main");
 
 require("dotenv").config();
@@ -157,6 +158,7 @@ const getAllPatients = async (req, res) => {
     tenantDatabase = db;
 
     const patients = await Patient.findAll({
+      where: { status: "REGISTERED" },
       order: [["createdAt", "DESC"]],
     });
 
@@ -278,6 +280,77 @@ const getPatientByVisitNumber = async (req, res) => {
 };
 
 // =====================================================
+// ADMIT PATIENT TO CHECKUP
+// POST /api/patients/:id/admit
+// =====================================================
+
+const admitPatient = async (req, res) => {
+  let tenantDatabase = null;
+
+  try {
+    const hospitalId = await getUserHospitalId(req.user.userId);
+    const { Patient, tenantDatabase: db } = await getPatientModel(hospitalId);
+    tenantDatabase = db;
+    const Checkup = defineCheckupModel(tenantDatabase);
+    const patient = await Patient.findByPk(req.params.id);
+
+    if (!patient) {
+      await tenantDatabase.close();
+      return res.status(404).json({ success: false, message: "Patient not found" });
+    }
+    if (!["REGISTERED", "CHECKUP"].includes(patient.status)) {
+      await tenantDatabase.close();
+      return res.status(400).json({
+        success: false,
+        message: `Patient cannot be admitted from ${patient.status} status`,
+      });
+    }
+
+    const existingCheckup = await Checkup.findOne({
+      where: {
+        patientId: patient.id,
+        status: ["WAITING", "IN_PROGRESS"],
+      },
+    });
+    if (existingCheckup) {
+      await tenantDatabase.close();
+      return res.status(409).json({ success: false, message: "Patient already has an active checkup", checkup: existingCheckup });
+    }
+
+    const transaction = await tenantDatabase.transaction();
+    let checkup;
+    try {
+      await patient.update({ status: "CHECKUP" }, { transaction });
+      checkup = await Checkup.create(
+        {
+          patientId: patient.id,
+          visitNumber: patient.visitNumber,
+          symptoms: req.body.symptoms || null,
+          createdBy: req.user.userId,
+        },
+        { transaction }
+      );
+      await transaction.commit();
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+
+    await tenantDatabase.close();
+    return res.status(201).json({
+      success: true,
+      message: "Patient admitted to checkup queue",
+      patient,
+      checkup,
+    });
+  } catch (error) {
+    if (tenantDatabase) await tenantDatabase.close().catch(() => {});
+    console.error("Admit patient error:", error);
+    return res.status(500).json({ success: false, message: error.message || "Failed to admit patient" });
+  }
+};
+
+// =====================================================
 // UPDATE PATIENT
 // PUT /api/patients/:id
 // =====================================================
@@ -394,6 +467,7 @@ module.exports = {
   getAllPatients,
   getPatientById,
   getPatientByVisitNumber,
+  admitPatient,
   updatePatient,
   deletePatient,
 };

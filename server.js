@@ -21,7 +21,9 @@ const hospitalRoutes = require("./routes/hospital.routes");
 const patientRoutes = require("./routes/patient.routes");
 const hospitalEmployeeRoutes = require("./routes/hospitalEmployee.routes");
 const checkupRoutes = require("./routes/checkup.routes");
+const inPatientRoutes = require("./routes/inPatient.routes");
 const authMiddleware = require("./middleware/auth.middleware");
+const { migrateTenantDatabases } = require("./services/hospital/migrateTenantDatabases.service");
 
 
 const app = express();
@@ -87,6 +89,7 @@ app.use("/api/hospitals", hospitalRoutes);
 app.use("/api/patients", patientRoutes);
 app.use("/api/hospital-employees", hospitalEmployeeRoutes);
 app.use("/api/checkups", checkupRoutes);
+app.use("/api/inpatients", inPatientRoutes);
 
 // Health check
 
@@ -121,6 +124,8 @@ const startServer = async () => {
     console.log(
       "Main database tables synchronized successfully"
     );
+
+    await migrateTenantDatabases();
 
 
     app.listen(PORT,()=>{

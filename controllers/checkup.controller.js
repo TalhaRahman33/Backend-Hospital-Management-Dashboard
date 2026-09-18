@@ -2,6 +2,7 @@ const { Op } = require("sequelize");
 const { Sequelize } = require("sequelize");
 const definePatientModel = require("../models/tenant/Patient");
 const defineCheckupModel = require("../models/tenant/Checkup");
+const defineInPatientModel = require("../models/tenant/InPatient");
 const { Hospital, UserHospital } = require("../models/main");
 
 require("dotenv").config();
@@ -36,8 +37,9 @@ const getCheckupContext = async (userId) => {
   await tenantDatabase.authenticate();
   const Patient = definePatientModel(tenantDatabase);
   const Checkup = defineCheckupModel(tenantDatabase);
+  const InPatient = defineInPatientModel(tenantDatabase);
 
-  return { Patient, Checkup, tenantDatabase };
+  return { Patient, Checkup, InPatient, tenantDatabase };
 };
 
 const createCheckup = async (req, res) => {
@@ -64,6 +66,11 @@ const createCheckup = async (req, res) => {
       return res.status(404).json({ success: false, message: "Patient not found" });
     }
 
+    if (!["REGISTERED", "CHECKUP"].includes(patient.status)) {
+      await tenantDatabase.close();
+      return res.status(400).json({ success: false, message: `Patient cannot be added to checkup from ${patient.status} status` });
+    }
+
     const existingCheckup = await Checkup.findOne({
       where: {
         patientId,
@@ -86,6 +93,7 @@ const createCheckup = async (req, res) => {
       symptoms: symptoms || null,
       createdBy: req.user.userId,
     });
+    await patient.update({ status: "CHECKUP" });
 
     await tenantDatabase.close();
     return res.status(201).json({
@@ -179,7 +187,7 @@ const updateCheckup = async (req, res) => {
 
   try {
     const { status, doctorId, symptoms, diagnosis, prescription, notes } = req.body;
-    const { Checkup, tenantDatabase: db } = await getCheckupContext(req.user.userId);
+    const { Patient, Checkup, InPatient, tenantDatabase: db } = await getCheckupContext(req.user.userId);
     tenantDatabase = db;
     const checkup = await Checkup.findByPk(req.params.id);
 
@@ -220,7 +228,41 @@ const updateCheckup = async (req, res) => {
       if (status === "COMPLETED") checkup.completedAt = new Date();
     }
 
-    await checkup.save();
+    const transaction = await tenantDatabase.transaction();
+    try {
+      await checkup.save({ transaction });
+
+      if (status === "COMPLETED") {
+        await Patient.update(
+          { status: "INPATIENT" },
+          { where: { id: checkup.patientId }, transaction }
+        );
+        const existingInPatient = await InPatient.findOne({
+          where: { patientId: checkup.patientId },
+          transaction,
+        });
+        if (existingInPatient) {
+          await existingInPatient.update(
+            { status: "ADMITTED", dischargedAt: null, dischargeNotes: null },
+            { transaction }
+          );
+        } else {
+          const patient = await Patient.findByPk(checkup.patientId, { transaction });
+          await InPatient.create(
+            {
+              patientId: checkup.patientId,
+              visitNumber: patient.visitNumber,
+              admissionReason: patient.purposeOfVisit,
+            },
+            { transaction }
+          );
+        }
+      }
+      await transaction.commit();
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
     await tenantDatabase.close();
     return res.status(200).json({
       success: true,

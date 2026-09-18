@@ -2,6 +2,7 @@ const { Sequelize } = require("sequelize");
 const definePatientModel = require("../../models/tenant/Patient");
 const defineHospitalEmployeeModel = require("../../models/tenant/HospitalEmployee");
 const defineCheckupModel = require("../../models/tenant/Checkup");
+const defineInPatientModel = require("../../models/tenant/InPatient");
 
 require("dotenv").config();
 
@@ -66,6 +67,7 @@ const createHospitalDatabase = async (databaseName) => {
     definePatientModel(tenantDatabase);
     defineHospitalEmployeeModel(tenantDatabase);
     defineCheckupModel(tenantDatabase);
+    defineInPatientModel(tenantDatabase);
 
     // --------------------------------
     // 5. Create tenant tables
