@@ -2,6 +2,7 @@ const { Op } = require("sequelize");
 const { Sequelize } = require("sequelize");
 const definePatientModel = require("../models/tenant/Patient");
 const defineInPatientModel = require("../models/tenant/InPatient");
+const defineDischargedPatientModel = require("../models/tenant/DischargedPatient");
 const { Hospital, UserHospital } = require("../models/main");
 
 require("dotenv").config();
@@ -32,6 +33,7 @@ const getInPatientContext = async (userId) => {
   return {
     Patient: definePatientModel(tenantDatabase),
     InPatient: defineInPatientModel(tenantDatabase),
+    DischargedPatient: defineDischargedPatientModel(tenantDatabase),
     tenantDatabase,
   };
 };
@@ -80,7 +82,7 @@ const dischargeInPatient = async (req, res) => {
 
   try {
     const { dischargeNotes } = req.body;
-    const { Patient, InPatient, tenantDatabase: db } = await getInPatientContext(
+    const { Patient, InPatient, DischargedPatient, tenantDatabase: db } = await getInPatientContext(
       req.user.userId
     );
     tenantDatabase = db;
@@ -99,6 +101,17 @@ const dischargeInPatient = async (req, res) => {
     try {
       await inPatient.update(
         { status: "DISCHARGED", dischargedAt: new Date(), dischargeNotes: dischargeNotes || null },
+        { transaction }
+      );
+      await DischargedPatient.create(
+        {
+          patientId: inPatient.patientId,
+          inPatientId: inPatient.id,
+          visitNumber: inPatient.visitNumber,
+          admittedAt: inPatient.admittedAt,
+          dischargedAt: inPatient.dischargedAt,
+          dischargeNotes: inPatient.dischargeNotes,
+        },
         { transaction }
       );
       await Patient.update(

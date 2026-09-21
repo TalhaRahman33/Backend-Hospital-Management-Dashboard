@@ -1,6 +1,7 @@
 const { Sequelize } = require("sequelize");
 const definePatientModel = require("../../models/tenant/Patient");
 const defineInPatientModel = require("../../models/tenant/InPatient");
+const defineDischargedPatientModel = require("../../models/tenant/DischargedPatient");
 const { Hospital } = require("../../models/main");
 
 require("dotenv").config();
@@ -25,6 +26,7 @@ const migrateTenantDatabases = async () => {
       await tenantDatabase.authenticate();
       const Patient = definePatientModel(tenantDatabase);
       const InPatient = defineInPatientModel(tenantDatabase);
+      const DischargedPatient = defineDischargedPatientModel(tenantDatabase);
 
       // Do not use sync({ alter: true }) here. Repeated Sequelize ALTER operations
       // can keep adding MySQL indexes until the 64-key limit is reached.
@@ -46,6 +48,7 @@ const migrateTenantDatabases = async () => {
 
       // Creates only missing tables; it does not alter existing tables or indexes.
       await InPatient.sync();
+      await DischargedPatient.sync();
       console.log(`Tenant tables synchronized for: ${hospital.databaseName}`);
     } finally {
       await tenantDatabase.close();
