@@ -4,6 +4,7 @@ const defineHospitalEmployeeModel = require("../../models/tenant/HospitalEmploye
 const defineCheckupModel = require("../../models/tenant/Checkup");
 const defineInPatientModel = require("../../models/tenant/InPatient");
 const defineDischargedPatientModel = require("../../models/tenant/DischargedPatient");
+const definePackageRateModel = require("../../models/tenant/PackageRate");
 
 require("dotenv").config();
 
@@ -70,6 +71,7 @@ const createHospitalDatabase = async (databaseName) => {
     defineCheckupModel(tenantDatabase);
     defineInPatientModel(tenantDatabase);
     defineDischargedPatientModel(tenantDatabase);
+    definePackageRateModel(tenantDatabase);
 
     // --------------------------------
     // 5. Create tenant tables
