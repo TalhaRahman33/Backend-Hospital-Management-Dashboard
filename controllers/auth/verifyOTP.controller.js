@@ -11,10 +11,12 @@ const { compareOTP } = require("../../utils/otp");
 const {
   generateAccessToken,
   generateRefreshToken,
+  getAccessTokenExpiryMs,
+  getRefreshTokenExpiryMs,
 } = require("../../utils/jwt");
 
-const ACCESS_TOKEN_MAX_AGE = 30 * 60 * 1000;
-const REFRESH_TOKEN_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
+const ACCESS_TOKEN_MAX_AGE = getAccessTokenExpiryMs();
+const REFRESH_TOKEN_MAX_AGE = getRefreshTokenExpiryMs();
 
 const verifyOTP = async (req, res) => {
   try {

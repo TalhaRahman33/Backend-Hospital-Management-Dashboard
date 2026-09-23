@@ -1,4 +1,10 @@
-const { verifyRefreshToken, generateAccessToken, generateRefreshToken } = require("../../utils/jwt");
+const {
+  verifyRefreshToken,
+  generateAccessToken,
+  generateRefreshToken,
+  getAccessTokenExpiryMs,
+  getRefreshTokenExpiryMs,
+} = require("../../utils/jwt");
 const { User, Role, UserHospital, Hospital } = require("../../models/main");
 
 const refreshSession = async (req, res) => {
@@ -56,14 +62,14 @@ const refreshSession = async (req, res) => {
       httpOnly: true,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
-      maxAge: 30 * 60 * 1000,
+      maxAge: getAccessTokenExpiryMs(),
     });
 
     res.cookie("refreshToken", nextRefreshToken, {
       httpOnly: true,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: getRefreshTokenExpiryMs(),
     });
 
     const defaultHospital = user.hospitalAssignments?.[0]?.hospital || null;

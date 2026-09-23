@@ -4,6 +4,8 @@ const {
   generateAccessToken,
   generateRefreshToken,
   verifyRefreshToken,
+  getAccessTokenExpiryMs,
+  getRefreshTokenExpiryMs,
 } = require("../utils/jwt");
 
 const clearAuthCookies = (res) => {
@@ -38,12 +40,12 @@ const setAuthCookies = (res, accessToken, refreshToken) => {
 
   res.cookie("accessToken", accessToken, {
     ...cookieOptions,
-    maxAge: 30 * 60 * 1000,
+    maxAge: getAccessTokenExpiryMs(),
   });
 
   res.cookie("refreshToken", refreshToken, {
     ...cookieOptions,
-    maxAge: 7 * 24 * 60 * 60 * 1000,
+    maxAge: getRefreshTokenExpiryMs(),
   });
 };
 
