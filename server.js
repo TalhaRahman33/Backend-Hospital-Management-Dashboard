@@ -24,6 +24,7 @@ const checkupRoutes = require("./routes/checkup.routes");
 const inPatientRoutes = require("./routes/inPatient.routes");
 const dischargedPatientRoutes = require("./routes/dischargedPatient.routes");
 const packageRateRoutes = require("./routes/packageRate.routes");
+const dmoDashboardRoutes = require("./routes/dmoDashboard.routes");
 const authMiddleware = require("./middleware/auth.middleware");
 const { migrateTenantDatabases } = require("./services/hospital/migrateTenantDatabases.service");
 
@@ -94,6 +95,7 @@ app.use("/api/checkups", checkupRoutes);
 app.use("/api/inpatients", inPatientRoutes);
 app.use("/api/discharged-patients", dischargedPatientRoutes);
 app.use("/api/package-rates", packageRateRoutes);
+app.use("/api/dmo-dashboard", dmoDashboardRoutes);
 
 // Health check
 
